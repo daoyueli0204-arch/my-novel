@@ -3,16 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <!-- 瀏覽器分頁名稱（可自行修改） -->
-  <title>亂書萬藏 • 個人小說創作館</title>
-  <!-- 載入 Tailwind CSS 樣式庫 -->
+  <title>亂書萬藏 • 小說創作館</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- 載入 React 18 與 ReactDOM -->
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-  <!-- 載入 Babel 編譯器 -->
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <!-- 載入 Supabase 雲端資料庫 SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
@@ -22,12 +17,12 @@
     const { useState, useEffect, useMemo } = React;
     const { createClient } = supabase;
 
-    // 💡 預填專屬 Supabase 網址
+    // 專屬 Supabase 網址已為你預填
     const DEFAULT_SUPABASE_URL = "https://vrywjinauywqvqsnvgdt.supabase.co";
-    // 💡 請在此雙引號中貼入你的 Publishable Key (sb_publishable_...)
-    const DEFAULT_SUPABASE_ANON_KEY = "sb_publishable_-UwnbY6nQLkejQbzvdWSRA_rqydMjDg"; 
+    // 💡 請在此雙引號中填入你的 Publishable Key (sb_publishable_...)
+    const DEFAULT_SUPABASE_ANON_KEY = ""; 
 
-    // 全站主題樣式配置
+    // 全站三大護眼主題樣式
     const GLOBAL_THEMES = {
       light: {
         id: "light",
@@ -64,7 +59,6 @@
       }
     };
 
-    // 封面色系
     const THEME_ACCENTS = {
       indigo: "bg-indigo-700",
       emerald: "bg-emerald-700",
@@ -73,7 +67,6 @@
       slate: "bg-slate-700"
     };
 
-    // 內建圖示組件
     const Icon = ({ name, className = "w-4 h-4" }) => {
       const paths = {
         book: <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M4 19.5A2.5 2.5 0 0 0 6.5 22H20V2H6.5A2.5 2.5 0 0 0 4 4.5v15z" />,
@@ -94,8 +87,7 @@
         x: <path d="M18 6 6 18M6 6l12 12" />,
         eye: <><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" /><circle cx="12" cy="12" r="3" /></>,
         draft: <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M16 13H8M16 17H8M10 9H8" />,
-        rocket: <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09zM12 15l-3-3m5-7.5c2.5-2.5 6-3 6-3s-.5 3.5-3 6c-1.4 1.4-3.5 1.7-5 .5l-1.5 1.5 5 5 1.5-1.5c-1.2-1.5-.9-3.6.5-5z" />,
-        palette: <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.9 0 1.6-.7 1.6-1.6 0-.4-.2-.8-.5-1.1-.3-.3-.4-.7-.4-1.1 0-.9.7-1.6 1.6-1.6h1.9c4.4 0 8-3.6 8-8 0-4.8-4.1-8.6-9.2-8.6z" />
+        rocket: <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09zM12 15l-3-3m5-7.5c2.5-2.5 6-3 6-3s-.5 3.5-3 6c-1.4 1.4-3.5 1.7-5 .5l-1.5 1.5 5 5 1.5-1.5c-1.2-1.5-.9-3.6.5-5z" />
       };
       return (
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -105,11 +97,7 @@
     };
 
     function App() {
-      // 全站色彩主題狀態（明亮、米黃、暗黑）
-      const [globalTheme, setGlobalTheme] = useState(() => {
-        return localStorage.getItem("novel_site_theme") || "light";
-      });
-
+      const [globalTheme, setGlobalTheme] = useState(() => localStorage.getItem("novel_site_theme") || "light");
       const currentTheme = GLOBAL_THEMES[globalTheme] || GLOBAL_THEMES.light;
 
       const changeTheme = (th) => {
@@ -117,7 +105,6 @@
         localStorage.setItem("novel_site_theme", th);
       };
 
-      // 雲端資料庫設定
       const [sbConfig, setSbConfig] = useState(() => ({
         url: localStorage.getItem("sb_novel_url") || DEFAULT_SUPABASE_URL,
         key: localStorage.getItem("sb_novel_key") || DEFAULT_SUPABASE_ANON_KEY
@@ -134,7 +121,6 @@
         return null;
       }, [sbConfig]);
 
-      // 核心資料
       const [library, setLibrary] = useState([]);
       const [draftsList, setDraftsList] = useState([]);
       const [isLoading, setIsLoading] = useState(false);
@@ -142,31 +128,23 @@
       const [currentBookId, setCurrentBookId] = useState("");
       const [currentChapterId, setCurrentChapterId] = useState("");
 
-      // 後台狀態
       const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
       const [showPasswordModal, setShowPasswordModal] = useState(false);
       const [showConfigModal, setShowConfigModal] = useState(false);
       const [passwordInput, setPasswordInput] = useState("");
-      const [adminTab, setAdminTab] = useState("books"); // 'books' | 'chapters' | 'drafts'
+      const [adminTab, setAdminTab] = useState("books");
       const [adminSelectedBookId, setAdminSelectedBookId] = useState("");
 
-      // 作品表單
       const [bookForm, setBookForm] = useState({ id: "", title: "", author: "王行火華", genre: "玄幻奇幻", status: "連載中", cover_theme: "indigo", description: "" });
       const [isEditingBook, setIsEditingBook] = useState(false);
-
-      // 章節表單
       const [chapterForm, setChapterForm] = useState({ id: "", title: "", content: "" });
       const [isEditingChapter, setIsEditingChapter] = useState(false);
-
-      // 草稿表單
       const [draftForm, setDraftForm] = useState({ id: "", title: "", content: "" });
       const [isEditingDraft, setIsEditingDraft] = useState(false);
 
-      // 閱讀字型字級
       const [fontSize, setFontSize] = useState(19);
       const [fontFamily, setFontFamily] = useState("serif");
 
-      // 抓取雲端資料（包含書籍、章節、草稿）
       const fetchCloudData = async () => {
         if (!supabaseClient) return;
         setIsLoading(true);
@@ -174,14 +152,11 @@
           const { data: booksData } = await supabaseClient.from("books").select("*").order("created_at", { ascending: true });
           const { data: chaptersData } = await supabaseClient.from("chapters").select("*").order("created_at", { ascending: true });
           
-          // 嘗試抓取草稿
           let draftsData = [];
           try {
             const res = await supabaseClient.from("drafts").select("*").order("created_at", { ascending: false });
             if (res.data) draftsData = res.data;
-          } catch(err) {
-            console.warn("尚未建立草稿資料表，請執行 SQL", err);
-          }
+          } catch(err) {}
 
           if (booksData && booksData.length > 0) {
             const assembled = booksData.map((b) => ({
@@ -215,20 +190,17 @@
       const adminActiveBook = useMemo(() => library.find((b) => b.id === adminSelectedBookId) || library[0] || null, [library, adminSelectedBookId]);
       const getWords = (txt = "") => (txt || "").replace(/\s+/g, "").length;
 
-      // 當前選擇書籍的草稿列表
       const currentBookDrafts = useMemo(() => {
         if (!adminActiveBook) return [];
         return draftsList.filter((d) => d.book_id === adminActiveBook.id);
       }, [draftsList, adminActiveBook]);
 
-      // --- 作品操作 ---
       const handleSaveBook = async (e) => {
         e.preventDefault();
         if (!bookForm.title.trim()) return alert("請輸入作品名稱！");
-        const payload = { ...bookForm };
         if (supabaseClient) {
           setIsLoading(true);
-          await supabaseClient.from("books").upsert(payload);
+          await supabaseClient.from("books").upsert({ ...bookForm });
           setIsLoading(false);
           await fetchCloudData();
         }
@@ -236,7 +208,7 @@
       };
 
       const handleDeleteBook = async (id, title) => {
-        if (!confirm(`確定刪除《${title}》及其所有章節與草稿嗎？`)) return;
+        if (!confirm(`確定刪除《${title}》嗎？`)) return;
         if (supabaseClient) {
           setIsLoading(true);
           await supabaseClient.from("books").delete().eq("id", id);
@@ -245,16 +217,10 @@
         }
       };
 
-      // --- 章節操作 ---
       const handleSaveChapter = async (e) => {
         e.preventDefault();
         if (!chapterForm.title.trim()) return alert("請填寫章節名稱！");
-        const payload = {
-          id: chapterForm.id,
-          book_id: adminSelectedBookId,
-          title: chapterForm.title,
-          content: chapterForm.content
-        };
+        const payload = { id: chapterForm.id, book_id: adminSelectedBookId, title: chapterForm.title, content: chapterForm.content };
         if (supabaseClient) {
           setIsLoading(true);
           await supabaseClient.from("chapters").upsert(payload);
@@ -274,16 +240,10 @@
         }
       };
 
-      // --- 草稿操作 ---
       const handleSaveDraft = async (e) => {
         e.preventDefault();
         if (!draftForm.title.trim()) return alert("請輸入草稿標題！");
-        const payload = {
-          id: draftForm.id,
-          book_id: adminSelectedBookId,
-          title: draftForm.title,
-          content: draftForm.content
-        };
+        const payload = { id: draftForm.id, book_id: adminSelectedBookId, title: draftForm.title, content: draftForm.content };
         if (supabaseClient) {
           setIsLoading(true);
           const { error } = await supabaseClient.from("drafts").upsert(payload);
@@ -304,28 +264,20 @@
         }
       };
 
-      // 🚀 將草稿一鍵升格為正式章節並刪除草稿
       const handlePublishDraftAsChapter = async (draft) => {
-        if (!confirm(`確定要將草稿「${draft.title}」正式發布為章節嗎？發布後讀者將可看見此章節。`)) return;
+        if (!confirm(`確定將草稿「${draft.title}」正式發布為章節嗎？發布後讀者即可看見。`)) return;
         if (supabaseClient) {
           setIsLoading(true);
-          // 1. 寫入正式章節表
-          const newChap = {
-            id: "chap-" + Date.now(),
-            book_id: draft.book_id,
-            title: draft.title,
-            content: draft.content
-          };
+          const newChap = { id: "chap-" + Date.now(), book_id: draft.book_id, title: draft.title, content: draft.content };
           const { error: cErr } = await supabaseClient.from("chapters").upsert(newChap);
           if (cErr) {
             setIsLoading(false);
             return alert("發布失敗：" + cErr.message);
           }
-          // 2. 從草稿表中移除
           await supabaseClient.from("drafts").delete().eq("id", draft.id);
           setIsLoading(false);
           await fetchCloudData();
-          alert("🎉 發布成功！草稿已正式轉為公開章節！");
+          alert("🎉 發布成功！草稿已轉為公開章節！");
         }
       };
 
@@ -334,7 +286,7 @@
         localStorage.setItem("sb_novel_url", sbConfig.url.trim());
         localStorage.setItem("sb_novel_key", sbConfig.key.trim());
         setShowConfigModal(false);
-        alert("雲端連線資訊已更新！");
+        alert("雲端連線已更新！");
       };
 
       const currentIndex = activeBook?.chapters?.findIndex((c) => c.id === currentChapterId) ?? -1;
@@ -343,14 +295,12 @@
 
       return (
         <div className={`min-h-screen ${currentTheme.bg} ${currentTheme.textMain} font-sans transition-colors duration-200`}>
-          {/* 頂端導航列 */}
           <header className={`sticky top-0 z-40 backdrop-blur-md ${currentTheme.navBg} border-b shadow-sm transition-colors`}>
             <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <button onClick={() => setView("bookshelf")} className="flex items-center gap-2 text-xl font-bold tracking-tight text-indigo-500 hover:opacity-80">
                   <Icon name="library" className="w-6 h-6" />
-                  {/* 網站站名（可自行替換） */}
-                  <span>亂書萬藏• 同人原創</span>
+                  <span>亂書萬藏 • 同人原創連載</span>
                 </button>
                 <div onClick={() => setShowConfigModal(true)} className={`cursor-pointer hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${supabaseClient ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/30" : "bg-amber-500/10 text-amber-600 border-amber-500/30"}`}>
                   <Icon name="cloud" className="w-3.5 h-3.5" />
@@ -359,7 +309,6 @@
               </div>
 
               <div className="flex items-center gap-2.5">
-                {/* ☀️🍵🌙 全站主題配色切換按鈕 */}
                 <div className={`flex items-center p-1 rounded-xl border ${currentTheme.border} ${currentTheme.cardBg}`}>
                   {Object.values(GLOBAL_THEMES).map((th) => (
                     <button
@@ -370,7 +319,6 @@
                           ? "bg-indigo-600 text-white font-bold shadow-sm"
                           : `${currentTheme.textSub} hover:opacity-100`
                       }`}
-                      title={`切換為${th.name}`}
                     >
                       {th.id === "light" ? "☀️ 白晝" : th.id === "cream" ? "🍵 護眼" : "🌙 深夜"}
                     </button>
@@ -392,7 +340,6 @@
             </div>
           </header>
 
-          {/* 畫面 1: 作品書架首頁 */}
           {view === "bookshelf" && (
             <main className="max-w-6xl mx-auto px-4 py-10">
               <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -438,7 +385,6 @@
             </main>
           )}
 
-          {/* 畫面 2: 作品詳情頁面 */}
           {view === "book_detail" && activeBook && (
             <main className="max-w-4xl mx-auto px-4 py-8">
               <button onClick={() => setView("bookshelf")} className={`inline-flex items-center gap-1.5 text-xs mb-6 ${currentTheme.textSub} hover:opacity-100`}>
@@ -485,11 +431,10 @@
             </main>
           )}
 
-          {/* 畫面 3: 沉浸閱讀頁面 */}
           {view === "reading" && activeBook && activeChapter && (
             <div className="relative">
               <div className={`sticky top-16 z-30 border-b backdrop-blur-md py-2.5 px-4 flex items-center justify-between max-w-3xl mx-auto ${currentTheme.navBg}`}>
-                <button onClick={() => setView("book_detail")} className={`text-xs font-medium inline-flex items-center gap-1 opacity-70 hover:opacity-100`}>
+                <button onClick={() => setView("book_detail")} className="text-xs font-medium inline-flex items-center gap-1 opacity-70 hover:opacity-100">
                   <Icon name="arrowLeft" className="w-3.5 h-3.5" /> 目錄
                 </button>
                 <div className="flex items-center gap-3 text-xs">
@@ -522,7 +467,6 @@
             </div>
           )}
 
-          {/* 畫面 4: 作者創作後台 (含草稿欄、章節管理、作品設定) */}
           {view === "admin" && (
             <main className="max-w-5xl mx-auto px-4 py-8">
               <div className={`flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 ${currentTheme.cardBg} p-5 rounded-2xl border ${currentTheme.border} shadow-sm`}>
@@ -542,7 +486,6 @@
                 </div>
               </div>
 
-              {/* 後台標籤頁面切換 */}
               <div className={`flex border-b ${currentTheme.border} mb-6 gap-6`}>
                 <button onClick={() => setAdminTab("books")} className={`pb-2.5 font-semibold text-xs flex items-center gap-1.5 relative ${adminTab === "books" ? "text-indigo-500" : currentTheme.textSub}`}>
                   <Icon name="library" className="w-3.5 h-3.5" /> 所有作品（{library.length} 部）
@@ -558,7 +501,6 @@
                 </button>
               </div>
 
-              {/* 分頁 1: 作品卡片清單（如截圖位置：新增草稿按鈕） */}
               {adminTab === "books" && (
                 <div>
                   <div className="flex justify-between items-center mb-4">
@@ -581,18 +523,15 @@
                             <p className={`text-xs line-clamp-2 p-2.5 rounded-xl mb-4 leading-relaxed border ${currentTheme.border} ${currentTheme.inputBg}`}>{b.description || "暫無簡介"}</p>
                           </div>
                           
-                          {/* 💡 這裡就是你截圖的位置：在修改資訊與管理章節旁，加上「草稿欄」！ */}
                           <div className={`flex items-center justify-between pt-3 border-t ${currentTheme.border} gap-2 flex-wrap`}>
                             <div className="flex items-center gap-1.5">
                               <button onClick={() => { setBookForm({ ...b }); setIsEditingBook(true); }} className={`px-2.5 py-1 text-xs border ${currentTheme.border} rounded-lg hover:opacity-80`}>修改資訊</button>
                               <button onClick={() => handleDeleteBook(b.id, b.title)} className="p-1 text-zinc-400 hover:text-rose-500"><Icon name="trash" className="w-3.5 h-3.5" /></button>
                             </div>
                             <div className="flex items-center gap-2">
-                              {/* 📝 草稿欄按鈕 */}
                               <button onClick={() => { setAdminSelectedBookId(b.id); setAdminTab("drafts"); }} className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 border border-amber-500/30 flex items-center gap-1">
                                 <Icon name="draft" className="w-3 h-3" /> 草稿欄 ({draftsCount})
                               </button>
-                              {/* 正式章節按鈕 */}
                               <button onClick={() => { setAdminSelectedBookId(b.id); setAdminTab("chapters"); }} className="px-3 py-1 text-xs font-bold rounded-lg bg-indigo-500/10 text-indigo-500 hover:bg-indigo-500/20">
                                 管理章節內容 →
                               </button>
@@ -605,7 +544,6 @@
                 </div>
               )}
 
-              {/* 分頁 2: 正式章節清單 */}
               {adminTab === "chapters" && adminActiveBook && (
                 <div>
                   <div className={`p-3.5 rounded-xl mb-4 flex flex-wrap justify-between items-center gap-3 border ${currentTheme.border} ${currentTheme.cardBg}`}>
@@ -637,8 +575,8 @@
                             <span className="col-span-6 font-semibold truncate pr-2">{chap.title}</span>
                             <span className={`col-span-3 ${currentTheme.textSub}`}>{getWords(chap.content)} 字</span>
                             <div className="col-span-2 flex items-center justify-end gap-1.5">
-                              <button onClick={() => { setChapterForm({ ...chap }); setIsEditingChapter(true); }} className={`p-1 border rounded ${currentTheme.border}`} title="編輯內文"><Icon name="edit" className="w-3 h-3" /></button>
-                              <button onClick={() => handleDeleteChapter(chap.id, chap.title)} className="p-1 hover:bg-rose-500/10 text-rose-500 rounded" title="刪除"><Icon name="trash" className="w-3 h-3" /></button>
+                              <button onClick={() => { setChapterForm({ ...chap }); setIsEditingChapter(true); }} className={`p-1 border rounded ${currentTheme.border}`}><Icon name="edit" className="w-3 h-3" /></button>
+                              <button onClick={() => handleDeleteChapter(chap.id, chap.title)} className="p-1 hover:bg-rose-500/10 text-rose-500 rounded"><Icon name="trash" className="w-3 h-3" /></button>
                             </div>
                           </div>
                         ))}
@@ -648,7 +586,6 @@
                 </div>
               )}
 
-              {/* 分頁 3: 📝 草稿欄專區（作者私密草稿） */}
               {adminTab === "drafts" && adminActiveBook && (
                 <div>
                   <div className={`p-3.5 rounded-xl mb-4 flex flex-wrap justify-between items-center gap-3 border ${currentTheme.border} ${currentTheme.cardBg}`}>
@@ -675,7 +612,7 @@
                     </div>
                     {currentBookDrafts.length === 0 ? (
                       <div className={`p-8 text-center text-xs ${currentTheme.textSub}`}>
-                        目前沒有草稿！點選右上角「＋ 新增草稿」開始秘密碼字創作吧。
+                        目前沒有草稿！點選右上角「＋ 新增草稿」開始秘密創作。
                       </div>
                     ) : (
                       <div className={`divide-y ${currentTheme.border}`}>
@@ -685,14 +622,13 @@
                             <span className="col-span-5 font-semibold text-amber-500 truncate pr-2">{draft.title}</span>
                             <span className={`col-span-2 ${currentTheme.textSub}`}>{getWords(draft.content)} 字</span>
                             <div className="col-span-4 flex items-center justify-end gap-2">
-                              {/* 🚀 一鍵發布按鈕 */}
-                              <button onClick={() => handlePublishDraftAsChapter(draft)} className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold flex items-center gap-1 shadow-sm" title="將草稿推向正式發布章節">
+                              <button onClick={() => handlePublishDraftAsChapter(draft)} className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold flex items-center gap-1 shadow-sm">
                                 <Icon name="rocket" className="w-3 h-3" /> 正式發布
                               </button>
-                              <button onClick={() => { setDraftForm({ ...draft }); setIsEditingDraft(true); }} className={`p-1.5 border rounded-lg ${currentTheme.border}`} title="繼續編輯草稿">
+                              <button onClick={() => { setDraftForm({ ...draft }); setIsEditingDraft(true); }} className={`p-1.5 border rounded-lg ${currentTheme.border}`}>
                                 <Icon name="edit" className="w-3.5 h-3.5" />
                               </button>
-                              <button onClick={() => handleDeleteDraft(draft.id, draft.title)} className="p-1.5 text-zinc-400 hover:text-rose-500 rounded-lg" title="捨棄草稿">
+                              <button onClick={() => handleDeleteDraft(draft.id, draft.title)} className="p-1.5 text-zinc-400 hover:text-rose-500 rounded-lg">
                                 <Icon name="trash" className="w-3.5 h-3.5" />
                               </button>
                             </div>
@@ -706,7 +642,7 @@
             </main>
           )}
 
-          {/* 彈窗：編輯草稿（具備舒適夜間模式編輯框） */}
+          {/* 編輯草稿彈窗 */}
           {isEditingDraft && (
             <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
               <form onSubmit={handleSaveDraft} className={`${currentTheme.cardBg} rounded-2xl shadow-2xl max-w-3xl w-full p-6 text-xs flex flex-col max-h-[92vh] border ${currentTheme.border}`}>
@@ -714,7 +650,7 @@
                   <div className="flex items-center gap-2">
                     <span className="px-2 py-0.5 rounded bg-amber-500/10 text-amber-500 font-bold">草稿編輯</span>
                     <h3 className="text-sm font-bold">《{adminActiveBook?.title}》</h3>
-                    <span className={`text-[11px] ${currentTheme.textSub}`}>目前字數：{getWords(draftForm.content)} 字</span>
+                    <span className={`text-[11px] ${currentTheme.textSub}`}>字數：{getWords(draftForm.content)} 字</span>
                   </div>
                   <button type="button" onClick={() => setIsEditingDraft(false)} className={currentTheme.textSub}><Icon name="x" className="w-4 h-4" /></button>
                 </div>
@@ -729,7 +665,7 @@
                   </div>
                 </div>
                 <div className={`flex justify-between items-center mt-4 pt-3 border-t ${currentTheme.border}`}>
-                  <span className={`text-[11px] ${currentTheme.textSub}`}>儲存後僅保存在雲端草稿箱</span>
+                  <span className={`text-[11px] ${currentTheme.textSub}`}>僅保存於作者草稿箱</span>
                   <div className="flex gap-2">
                     <button type="button" onClick={() => setIsEditingDraft(false)} className={`px-3 py-1.5 rounded-lg border ${currentTheme.border}`}>取消</button>
                     <button type="submit" className="px-4 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold flex items-center gap-1">
@@ -741,7 +677,7 @@
             </div>
           )}
 
-          {/* 彈窗：編輯正式章節 */}
+          {/* 編輯正式章節彈窗 */}
           {isEditingChapter && (
             <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
               <form onSubmit={handleSaveChapter} className={`${currentTheme.cardBg} rounded-2xl shadow-2xl max-w-3xl w-full p-6 text-xs flex flex-col max-h-[92vh] border ${currentTheme.border}`}>
@@ -759,12 +695,12 @@
                     <input type="text" required value={chapterForm.title} onChange={(e) => setChapterForm({ ...chapterForm, title: e.target.value })} className={`w-full px-3 py-2 border rounded-xl text-xs font-semibold ${currentTheme.border} ${currentTheme.inputBg} focus:outline-none`} />
                   </div>
                   <div className="flex-1 flex flex-col">
-                    <label className="block font-bold mb-1">正文內容（發布後讀者可見）</label>
+                    <label className="block font-bold mb-1">正文內容（公開給讀者）</label>
                     <textarea required value={chapterForm.content} onChange={(e) => setChapterForm({ ...chapterForm, content: e.target.value })} className={`w-full flex-1 min-h-[300px] p-3.5 border rounded-xl font-serif text-sm leading-relaxed resize-none ${currentTheme.border} ${currentTheme.inputBg} focus:outline-none`} />
                   </div>
                 </div>
                 <div className={`flex justify-between items-center mt-4 pt-3 border-t ${currentTheme.border}`}>
-                  <span className={`text-[11px] ${currentTheme.textSub}`}>儲存後立即同步於前台</span>
+                  <span className={`text-[11px] ${currentTheme.textSub}`}>儲存後立即更新於前台</span>
                   <div className="flex gap-2">
                     <button type="button" onClick={() => setIsEditingChapter(false)} className={`px-3 py-1.5 rounded-lg border ${currentTheme.border}`}>取消</button>
                     <button type="submit" className="px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-bold flex items-center gap-1">
@@ -776,7 +712,7 @@
             </div>
           )}
 
-          {/* 彈窗：編輯作品資訊 */}
+          {/* 編輯作品資訊彈窗 */}
           {isEditingBook && (
             <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
               <form onSubmit={handleSaveBook} className={`${currentTheme.cardBg} rounded-2xl shadow-2xl max-w-lg w-full p-6 text-xs border ${currentTheme.border}`}>
@@ -832,7 +768,7 @@
             </div>
           )}
 
-          {/* 彈窗：作者登入 */}
+          {/* 作者登入彈窗 */}
           {showPasswordModal && (
             <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
               <form onSubmit={(e) => { e.preventDefault(); if (passwordInput === "author888") { setIsAdminLoggedIn(true); setShowPasswordModal(false); setPasswordInput(""); setView("admin"); } else { alert("密碼錯誤！預設通行碼為：author888"); } }} className={`${currentTheme.cardBg} rounded-2xl shadow-xl max-w-sm w-full p-6 text-xs border ${currentTheme.border}`}>
@@ -847,7 +783,7 @@
             </div>
           )}
 
-          {/* 彈窗：雲端設定 */}
+          {/* 雲端設定彈窗 */}
           {showConfigModal && (
             <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
               <form onSubmit={handleSaveConfig} className={`${currentTheme.cardBg} rounded-2xl shadow-xl max-w-md w-full p-6 text-xs border ${currentTheme.border}`}>

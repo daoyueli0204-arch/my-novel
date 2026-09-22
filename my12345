@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>墨香閣 • 個人小說雲端書城</title>
+  <!-- 載入 Tailwind CSS 樣式庫 -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- 載入 React 18 與 ReactDOM -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <!-- 載入 Babel 編譯器 -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <!-- 載入 Supabase 雲端資料庫 SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="bg-zinc-50 text-zinc-800">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useMemo } = React;
+    const { createClient } = supabase;
+
+    // 💡 已為你預先填入專屬的 Supabase 網址
+    const DEFAULT_SUPABASE_URL = "https://vrywjinauywqvqsnvgdt.supabase.co";
+    const DEFAULT_SUPABASE_ANON_KEY = ""; // 可在網頁後台貼入你的 Publishable Key
+
+    // 內建輕量化 SVG 圖示組件
+    const Icon = ({ name, className = "w-4 h-4" }) => {
+      const paths = {
+        book: <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M4 19.5A2.5 2.5 0 0 0 6.5 22H20V2H6.5A2.5 2.5 0 0 0 4 4.5v15z" />,
+        bookOpen: <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2zM22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />,
+        plus: <path d="M12 5v14M5 12h14" />,
+        trash: <path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />,
+        edit: <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />,
+        save: <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2zM17 21v-8H7v8M7 3v5h8" />,
+        arrowLeft: <path d="M19 12H5M12 19l-7-7 7-7" />,
+        settings: <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" />,
+        logOut: <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />,
+        chevronLeft: <path d="M15 18l-6-6 6-6" />,
+        chevronRight: <path d="M9 18l6-6-6-6" />,
+        library: <path d="m16 6 4 14M12 6v14M8 8v12M4 4v16" />,
+        layers: <><polygon points="12 2 2 7 12 12 22 7 12 2" /><polyline points="2 17 12 22 22 17" /><polyline points="2 12 12 17 22 12" /></>,
+        cloud: <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z" />,
+        refresh: <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8M3 3v5h5M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16M16 21h5v-5" />,
+        x: <path d="M18 6 6 18M6 6l12 12" />,
+        eye: <><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" /><circle cx="12" cy="12" r="3" /></>
+      };
+      return (
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+          {paths[name] || null}
+        </svg>
+      );
+    };
+
+    const INITIAL_DEMO_BOOK = {
+      id: "book-1",
+      title: "逆時光宿命之途",
+      author: "筆下生花",
+      genre: "玄幻奇幻",
+      status: "連載中",
+      cover_theme: "indigo",
+      description: "少年攜帶著昔日記憶踏上歸途。當命運的指針再次倒轉，那些曾經失去的約定，究竟是註定的重逢，還是另一場宿命的試煉？",
+      chapters: [
+        {
+          id: "b1-c1",
+          book_id: "book-1",
+          title: "第一章 命運的倒轉指針",
+          content: `長風自山脊呼嘯而過，夾雜著初秋微寒的濕氣。\n\n珩燁站在懸崖邊緣，指尖摩挲著懷中那枚已經失去光澤的時之刻印。遠處天際泛著暗紫色的微光，雷鳴低沉而綿長。\n\n「如果一切真能重新開始……」他喃喃自語。\n\n「喂！你一個人站在風口發什麼呆呢？」身後傳來清脆而略帶不滿的女聲。\n\n他回過頭，少女一襲紫衣隨風飄揚，正抱著雙臂皺著眉頭看著他。那一瞬間，記憶中無數次碎裂的畫面，彷彿在這一刻奇蹟般地嚴絲合縫。\n\n這一次，他絕不會再退後一步。`
+        }
+      ]
+    };
+
+    const READING_THEMES = {
+      cream: { name: "護眼米黃", bg: "bg-[#fbf7ee]", text: "text-[#2d2926]" },
+      light: { name: "明亮白晝", bg: "bg-[#ffffff]", text: "text-[#1a1a1a]" },
+      retro: { name: "復古羊皮", bg: "bg-[#f0e6d2]", text: "text-[#3c2f2f]" },
+      dark: { name: "深邃黑夜", bg: "bg-[#18181b]", text: "text-[#d4d4d8]" }
+    };
+
+    const THEME_ACCENTS = {
+      indigo: "bg-indigo-700",
+      emerald: "bg-emerald-700",
+      amber: "bg-amber-700",
+      rose: "bg-rose-700",
+      slate: "bg-slate-700"
+    };
+
+    function App() {
+      const [sbConfig, setSbConfig] = useState(() => ({
+        url: localStorage.getItem("sb_novel_url") || DEFAULT_SUPABASE_URL,
+        key: localStorage.getItem("sb_novel_key") || DEFAULT_SUPABASE_ANON_KEY
+      }));
+
+      const supabaseClient = useMemo(() => {
+        if (sbConfig.url && sbConfig.key) {
+          try {
+            return createClient(sbConfig.url, sbConfig.key);
+          } catch (e) {
+            console.error("Supabase 初始化錯誤", e);
+          }
+        }
+        return null;
+      }, [sbConfig]);
+
+      const [library, setLibrary] = useState([INITIAL_DEMO_BOOK]);
+      const [isLoading, setIsLoading] = useState(false);
+      const [view, setView] = useState("bookshelf");
+      const [currentBookId, setCurrentBookId] = useState("book-1");
+      const [currentChapterId, setCurrentChapterId] = useState("b1-c1");
+
+      const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
+      const [showPasswordModal, setShowPasswordModal] = useState(false);
+      const [showConfigModal, setShowConfigModal] = useState(false);
+      const [passwordInput, setPasswordInput] = useState("");
+      const [adminTab, setAdminTab] = useState("books");
+      const [adminSelectedBookId, setAdminSelectedBookId] = useState("book-1");
+
+      const [bookForm, setBookForm] = useState({ id: "", title: "", author: "筆名", genre: "玄幻", status: "連載中", cover_theme: "indigo", description: "" });
+      const [isEditingBook, setIsEditingBook] = useState(false);
+      const [chapterForm, setChapterForm] = useState({ id: "", title: "", content: "" });
+      const [isEditingChapter, setIsEditingChapter] = useState(false);
+
+      const [readerTheme, setReaderTheme] = useState("cream");
+      const [fontSize, setFontSize] = useState(19);
+      const [fontFamily, setFontFamily] = useState("serif");
+
+      const fetchCloudData = async () => {
+        if (!supabaseClient) return;
+        setIsLoading(true);
+        try {
+          const { data: booksData, error: bErr } = await supabaseClient.from("books").select("*").order("created_at", { ascending: true });
+          if (bErr) throw bErr;
+          const { data: chaptersData, error: cErr } = await supabaseClient.from("chapters").select("*").order("created_at", { ascending: true });
+          if (cErr) throw cErr;
+
+          if (booksData && booksData.length > 0) {
+            const assembled = booksData.map((b) => ({
+              ...b,
+              chapters: chaptersData.filter((c) => c.book_id === b.id)
+            }));
+            setLibrary(assembled);
+            if (!assembled.some((b) => b.id === currentBookId)) {
+              setCurrentBookId(assembled[0].id);
+            }
+          }
+        } catch (err) {
+          console.error("抓取失敗", err);
+        } finally {
+          setIsLoading(false);
+        }
+      };
+
+      useEffect(() => {
+        if (supabaseClient) fetchCloudData();
+      }, [supabaseClient]);
+
+      const activeBook = useMemo(() => library.find((b) => b.id === currentBookId) || library[0] || null, [library, currentBookId]);
+      const activeChapter = useMemo(() => {
+        if (!activeBook) return null;
+        return activeBook.chapters?.find((c) => c.id === currentChapterId) || activeBook.chapters?.[0] || null;
+      }, [activeBook, currentChapterId]);
+
+      const adminActiveBook = useMemo(() => library.find((b) => b.id === adminSelectedBookId) || library[0] || null, [library, adminSelectedBookId]);
+      const getWords = (txt = "") => txt.replace(/\s+/g, "").length;
+
+      const handleSaveBook = async (e) => {
+        e.preventDefault();
+        if (!bookForm.title.trim()) return alert("請輸入書名！");
+        const payload = {
+          id: bookForm.id,
+          title: bookForm.title,
+          author: bookForm.author || "筆名",
+          genre: bookForm.genre,
+          status: bookForm.status,
+          cover_theme: bookForm.cover_theme,
+          description: bookForm.description
+        };
+
+        if (supabaseClient) {
+          setIsLoading(true);
+          const { error } = await supabaseClient.from("books").upsert(payload);
+          setIsLoading(false);
+          if (error) return alert("雲端儲存失敗: " + error.message);
+          await fetchCloudData();
+        } else {
+          setLibrary((prev) => {
+            const exists = prev.some((b) => b.id === payload.id);
+            return exists ? prev.map((b) => b.id === payload.id ? { ...b, ...payload } : b) : [...prev, { ...payload, chapters: [] }];
+          });
+        }
+        setIsEditingBook(false);
+      };
+
+      const handleDeleteBook = async (id, title) => {
+        if (!confirm(`確定刪除《${title}》及其所有章節嗎？`)) return;
+        if (supabaseClient) {
+          setIsLoading(true);
+          await supabaseClient.from("books").delete().eq("id", id);
+          setIsLoading(false);
+          await fetchCloudData();
+        } else {
+          setLibrary((prev) => prev.filter((b) => b.id !== id));
+        }
+      };
+
+      const handleSaveChapter = async (e) => {
+        e.preventDefault();
+        if (!chapterForm.title.trim()) return alert("請填寫章節名稱！");
+        const payload = {
+          id: chapterForm.id,
+          book_id: adminSelectedBookId,
+          title: chapterForm.title,
+          content: chapterForm.content
+        };
+
+        if (supabaseClient) {
+          setIsLoading(true);
+          const { error } = await supabaseClient.from("chapters").upsert(payload);
+          setIsLoading(false);
+          if (error) return alert("章節儲存失敗: " + error.message);
+          await fetchCloudData();
+        } else {
+          setLibrary((prev) => prev.map((b) => {
+            if (b.id === adminSelectedBookId) {
+              const exists = b.chapters?.some((c) => c.id === payload.id);
+              const updated = exists ? b.chapters.map((c) => c.id === payload.id ? { ...c, ...payload } : c) : [...(b.chapters || []), payload];
+              return { ...b, chapters: updated };
+            }
+            return b;
+          }));
+        }
+        setIsEditingChapter(false);
+      };
+
+      const handleDeleteChapter = async (id, title) => {
+        if (!confirm(`確定刪除章節「${title}」嗎？`)) return;
+        if (supabaseClient) {
+          setIsLoading(true);
+          await supabaseClient.from("chapters").delete().eq("id", id);
+          setIsLoading(false);
+          await fetchCloudData();
+        } else {
+          setLibrary((prev) => prev.map((b) => b.id === adminSelectedBookId ? { ...b, chapters: b.chapters.filter((c) => c.id !== id) } : b));
+        }
+      };
+
+      const handleSaveConfig = (e) => {
+        e.preventDefault();
+        localStorage.setItem("sb_novel_url", sbConfig.url.trim());
+        localStorage.setItem("sb_novel_key", sbConfig.key.trim());
+        setShowConfigModal(false);
+        alert("雲端資料庫資訊已儲存！");
+      };
+
+      const currentIndex = activeBook?.chapters?.findIndex((c) => c.id === currentChapterId) ?? -1;
+      const prevChap = currentIndex > 0 ? activeBook?.chapters[currentIndex - 1] : null;
+      const nextChap = currentIndex !== -1 && currentIndex < (activeBook?.chapters?.length || 0) - 1 ? activeBook?.chapters[currentIndex + 1] : null;
+
+      return (
+        <div className={`min-h-screen ${view === "reading" ? READING_THEMES[readerTheme].bg + " " + READING_THEMES[readerTheme].text : "bg-zinc-50 text-zinc-800"} font-sans`}>
+          <header className="sticky top-0 z-40 backdrop-blur-md bg-white/90 border-b border-zinc-200 shadow-sm">
+            <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <button onClick={() => setView("bookshelf")} className="flex items-center gap-2 text-xl font-bold tracking-tight text-indigo-600 hover:opacity-80">
+                  <Icon name="library" className="w-6 h-6" />
+                  <span>墨香閣 • 連載雲端書城</span>
+                </button>
+                <div onClick={() => setShowConfigModal(true)} className={`cursor-pointer hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${supabaseClient ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-amber-50 text-amber-700 border-amber-200"}`}>
+                  <Icon name="cloud" className="w-3.5 h-3.5" />
+                  <span>{supabaseClient ? "雲端已連線" : "未連線 (點擊設定)"}</span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                {isLoading && <Icon name="refresh" className="w-4 h-4 text-indigo-600 animate-spin mr-2" />}
+                {view === "admin" ? (
+                  <button onClick={() => setView("bookshelf")} className="px-3.5 py-1.5 text-xs font-medium rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-700 flex items-center gap-1.5">
+                    <Icon name="eye" className="w-4 h-4" /> 返回書架
+                  </button>
+                ) : (
+                  <button onClick={() => isAdminLoggedIn ? setView("admin") : setShowPasswordModal(true)} className="px-3.5 py-1.5 text-xs font-medium rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm flex items-center gap-1.5">
+                    <Icon name="edit" className="w-4 h-4" /> {isAdminLoggedIn ? "作者工作台" : "作者登入"}
+                  </button>
+                )}
+              </div>
+            </div>
+          </header>
+
+          {view === "bookshelf" && (
+            <main className="max-w-6xl mx-auto px-4 py-10">
+              <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                  <h1 className="text-3xl font-black text-zinc-900 mb-1">精選作品書架</h1>
+                  <p className="text-zinc-500 text-sm">點選任意作品即可閱讀，文章內容由雲端資料庫即時提供。</p>
+                </div>
+                {supabaseClient && (
+                  <button onClick={fetchCloudData} className="px-3 py-1.5 text-xs rounded-lg border border-zinc-200 bg-white hover:bg-zinc-50 flex items-center gap-1 text-zinc-600">
+                    <Icon name="refresh" className="w-3.5 h-3.5" /> 重新整理
+                  </button>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {library.map((book) => {
+                  const accentBg = THEME_ACCENTS[book.cover_theme || "indigo"] || THEME_ACCENTS.indigo;
+                  const totalWords = (book.chapters || []).reduce((sum, c) => sum + getWords(c.content), 0);
+                  return (
+                    <div key={book.id} onClick={() => { setCurrentBookId(book.id); if (book.chapters?.[0]) setCurrentChapterId(book.chapters[0].id); setView("book_detail"); }} className="group bg-white rounded-2xl border border-zinc-200 overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col cursor-pointer transform hover:-translate-y-1">
+                      <div className={`${accentBg} p-6 text-white h-44 flex flex-col justify-between`}>
+                        <div className="flex justify-between items-start">
+                          <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-white/20">{book.genre || "小說"}</span>
+                          <span className="text-xs px-2 py-0.5 rounded bg-black/25">{book.status}</span>
+                        </div>
+                        <div>
+                          <h2 className="text-2xl font-bold tracking-tight mb-1 group-hover:underline">{book.title}</h2>
+                          <p className="text-xs text-white/80">作者：{book.author}</p>
+                        </div>
+                      </div>
+                      <div className="p-5 flex-1 flex flex-col justify-between">
+                        <p className="text-xs text-zinc-600 line-clamp-3 mb-4 leading-relaxed">{book.description || "暫無簡介"}</p>
+                        <div className="pt-3 border-t border-zinc-100 flex items-center justify-between text-xs text-zinc-500">
+                          <span>{book.chapters?.length || 0} 篇章節</span>
+                          <span>約 {(totalWords / 10000).toFixed(1)} 萬字</span>
+                          <span className="text-indigo-600 font-semibold group-hover:translate-x-1 transition-transform">開始閱讀 →</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </main>
+          )}
+
+          {view === "book_detail" && activeBook && (
+            <main className="max-w-4xl mx-auto px-4 py-8">
+              <button onClick={() => setView("bookshelf")} className="inline-flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-800 mb-6">
+                <Icon name="arrowLeft" className="w-4 h-4" /> 返回書架
+              </button>
+              <div className="bg-white rounded-2xl border border-zinc-200 p-6 md:p-8 shadow-sm mb-6 flex flex-col md:flex-row gap-6">
+                <div className={`w-28 h-40 rounded-lg shadow-md ${THEME_ACCENTS[activeBook.cover_theme || "indigo"]} text-white flex flex-col justify-between p-3 shrink-0`}>
+                  <span className="text-[10px] bg-white/20 rounded px-1 self-start">{activeBook.genre}</span>
+                  <div className="text-center font-bold text-sm leading-tight">{activeBook.title}</div>
+                  <div className="text-[10px] text-right text-white/80">{activeBook.author}</div>
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <h1 className="text-2xl font-bold text-zinc-900">{activeBook.title}</h1>
+                    <span className="text-xs px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 font-medium">{activeBook.status}</span>
+                  </div>
+                  <p className="text-xs text-zinc-500 mb-4">作者：{activeBook.author} • 共 {activeBook.chapters?.length || 0} 章</p>
+                  <p className="text-xs text-zinc-700 bg-zinc-50 p-3.5 rounded-xl border border-zinc-100 whitespace-pre-wrap leading-relaxed">{activeBook.description}</p>
+                  {activeBook.chapters?.length > 0 && (
+                    <button onClick={() => { setCurrentChapterId(activeBook.chapters[0].id); setView("reading"); }} className="mt-4 px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-xl inline-flex items-center gap-2 shadow-sm">
+                      <Icon name="bookOpen" className="w-4 h-4" /> 從第一章開始看
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div className="bg-white rounded-2xl border border-zinc-200 p-6 shadow-sm">
+                <h2 className="text-base font-bold text-zinc-900 mb-4 flex items-center gap-2">
+                  <Icon name="layers" className="w-4 h-4 text-indigo-600" /> 章節目錄清單
+                </h2>
+                {activeBook.chapters?.length === 0 ? (
+                  <div className="py-8 text-center text-zinc-400 text-xs">本書目前尚無發布章節。</div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                    {activeBook.chapters?.map((chap) => (
+                      <div key={chap.id} onClick={() => { setCurrentChapterId(chap.id); setView("reading"); }} className="p-3 rounded-xl border border-zinc-100 hover:border-indigo-300 bg-zinc-50/60 hover:bg-indigo-50/40 flex items-center justify-between cursor-pointer transition">
+                        <span className="text-xs font-medium text-zinc-800 truncate pr-2">{chap.title}</span>
+                        <span className="text-[11px] text-zinc-400">{getWords(chap.content)} 字</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </main>
+          )}
+
+          {view === "reading" && activeBook && activeChapter && (
+            <div className="relative">
+              <div className="sticky top-16 z-30 border-b backdrop-blur-md bg-opacity-90 py-2.5 px-4 flex items-center justify-between max-w-3xl mx-auto">
+                <button onClick={() => setView("book_detail")} className="text-xs font-medium inline-flex items-center gap-1 opacity-70 hover:opacity-100">
+                  <Icon name="arrowLeft" className="w-3.5 h-3.5" /> 目錄
+                </button>
+                <div className="flex items-center gap-3 text-xs">
+                  <div className="flex items-center gap-1 border rounded-lg p-0.5">
+                    {Object.keys(READING_THEMES).map((k) => (
+                      <button key={k} onClick={() => setReaderTheme(k)} className={`px-2 py-0.5 rounded text-[11px] ${readerTheme === k ? "bg-indigo-600 text-white font-bold" : "opacity-70"}`}>
+                        {READING_THEMES[k].name}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button onClick={() => setFontSize((s) => Math.max(14, s - 1))} className="w-5 h-5 rounded border flex items-center justify-center font-bold">-</button>
+                    <span className="w-4 text-center">{fontSize}</span>
+                    <button onClick={() => setFontSize((s) => Math.min(26, s + 1))} className="w-5 h-5 rounded border flex items-center justify-center font-bold">+</button>
+                  </div>
+                  <button onClick={() => setFontFamily((f) => f === "serif" ? "sans" : "serif")} className="px-2 py-0.5 rounded border text-[11px]">
+                    {fontFamily === "serif" ? "明體" : "黑體"}
+                  </button>
+                </div>
+              </div>
+
+              <article className="max-w-2xl mx-auto px-5 py-12 min-h-[75vh]">
+                <h1 className="text-2xl font-extrabold text-center mb-8 pb-4 border-b border-black/10">{activeChapter.title}</h1>
+                <div style={{ fontSize: `${fontSize}px`, lineHeight: "2.1" }} className={`${fontFamily === "serif" ? "font-serif" : "font-sans"} tracking-wide space-y-6 select-text whitespace-pre-wrap`}>
+                  {activeChapter.content}
+                </div>
+                <div className="mt-16 pt-6 border-t border-black/10 flex justify-between items-center text-xs">
+                  <button disabled={!prevChap} onClick={() => { if (prevChap) { setCurrentChapterId(prevChap.id); window.scrollTo({ top: 0, behavior: "smooth" }); } }} className="px-3 py-1.5 rounded-lg border disabled:opacity-30 flex items-center gap-1">
+                    <Icon name="chevronLeft" className="w-3.5 h-3.5" /> 上一章
+                  </button>
+                  <button onClick={() => setView("book_detail")} className="opacity-70">目錄</button>
+                  <button disabled={!nextChap} onClick={() => { if (nextChap) { setCurrentChapterId(nextChap.id); window.scrollTo({ top: 0, behavior: "smooth" }); } }} className="px-3 py-1.5 rounded-lg border disabled:opacity-30 flex items-center gap-1">
+                    下一章 <Icon name="chevronRight" className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </article>
+            </div>
+          )}
+
+          {view === "admin" && (
+            <main className="max-w-5xl mx-auto px-4 py-8">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 bg-white p-5 rounded-2xl border border-zinc-200 shadow-sm">
+                <div>
+                  <h1 className="text-xl font-bold text-zinc-900 flex items-center gap-2">
+                    <Icon name="edit" className="w-5 h-5 text-indigo-600" /> 作者專屬雲端創作台
+                  </h1>
+                  <p className="text-xs text-zinc-500 mt-1">發布後直接存入 Supabase，所有讀者同步可見。</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => setShowConfigModal(true)} className="px-3 py-1.5 rounded-lg border border-zinc-200 hover:bg-zinc-50 text-xs font-medium flex items-center gap-1 text-zinc-700">
+                    <Icon name="settings" className="w-3.5 h-3.5" /> 雲端連線設定
+                  </button>
+                  <button onClick={() => { setIsAdminLoggedIn(false); setView("bookshelf"); }} className="px-3 py-1.5 rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 text-xs font-medium flex items-center gap-1">
+                    <Icon name="logOut" className="w-3.5 h-3.5" /> 登出
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex border-b border-zinc-200 mb-6 gap-6">
+                <button onClick={() => setAdminTab("books")} className={`pb-2.5 font-semibold text-xs flex items-center gap-1.5 relative ${adminTab === "books" ? "text-indigo-600" : "text-zinc-500"}`}>
+                  <Icon name="library" className="w-3.5 h-3.5" /> 所有作品（{library.length} 部）
+                  {adminTab === "books" && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600" />}
+                </button>
+                <button onClick={() => setAdminTab("chapters")} className={`pb-2.5 font-semibold text-xs flex items-center gap-1.5 relative ${adminTab === "chapters" ? "text-indigo-600" : "text-zinc-500"}`}>
+                  <Icon name="layers" className="w-3.5 h-3.5" /> 章節管理：<span className="font-bold text-zinc-800">《{adminActiveBook?.title}》</span>
+                  {adminTab === "chapters" && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600" />}
+                </button>
+              </div>
+
+              {adminTab === "books" && (
+                <div>
+                  <div className="flex justify-between items-center mb-4">
+                    <span className="text-xs text-zinc-500">管理小說資訊與連載狀態</span>
+                    <button onClick={() => { setBookForm({ id: "book-" + Date.now(), title: "", author: "筆名", genre: "玄幻", status: "連載中", cover_theme: "indigo", description: "" }); setIsEditingBook(true); }} className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-sm flex items-center gap-1">
+                      <Icon name="plus" className="w-3.5 h-3.5" /> ＋ 建立新作品
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {library.map((b) => (
+                      <div key={b.id} className="p-5 bg-white rounded-2xl border border-zinc-200 shadow-sm flex flex-col justify-between">
+                        <div>
+                          <div className="flex justify-between items-start mb-2">
+                            <h3 className="text-base font-bold text-zinc-900">{b.title}</h3>
+                            <span className="text-[10px] px-2 py-0.5 rounded bg-zinc-100 font-medium">{b.status}</span>
+                          </div>
+                          <p className="text-xs text-zinc-500 mb-2">分類：{b.genre} • 章節：{b.chapters?.length || 0} 篇</p>
+                          <p className="text-xs text-zinc-600 line-clamp-2 bg-zinc-50 p-2 rounded-lg mb-4">{b.description || "暫無簡介"}</p>
+                        </div>
+                        <div className="flex items-center justify-between pt-3 border-t border-zinc-100">
+                          <div className="flex items-center gap-2">
+                            <button onClick={() => { setBookForm({ ...b }); setIsEditingBook(true); }} className="px-2.5 py-1 text-xs border rounded-lg hover:bg-zinc-50">修改資訊</button>
+                            <button onClick={() => handleDeleteBook(b.id, b.title)} className="p-1 text-zinc-400 hover:text-rose-600"><Icon name="trash" className="w-3.5 h-3.5" /></button>
+                          </div>
+                          <button onClick={() => { setAdminSelectedBookId(b.id); setAdminTab("chapters"); }} className="px-3 py-1 text-xs font-bold rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100">
+                            管理章節內容 →
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {adminTab === "chapters" && adminActiveBook && (
+                <div>
+                  <div className="p-3.5 bg-indigo-50/70 border border-indigo-100 rounded-xl mb-4 flex flex-wrap justify-between items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-indigo-950">編輯書籍：</span>
+                      <select value={adminSelectedBookId} onChange={(e) => setAdminSelectedBookId(e.target.value)} className="text-xs font-bold bg-white border border-indigo-200 rounded-lg px-2.5 py-1">
+                        {library.map((b) => <option key={b.id} value={b.id}>《{b.title}》</option>)}
+                      </select>
+                    </div>
+                    <button onClick={() => { setChapterForm({ id: "chap-" + Date.now(), title: `第 ${(adminActiveBook.chapters?.length || 0) + 1} 章 `, content: "" }); setIsEditingChapter(true); }} className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-medium shadow-sm flex items-center gap-1">
+                      <Icon name="plus" className="w-3.5 h-3.5" /> 新增章節到《{adminActiveBook.title}》
+                    </button>
+                  </div>
+
+                  <div className="bg-white rounded-2xl border border-zinc-200 shadow-sm overflow-hidden">
+                    <div className="p-3 bg-zinc-50 border-b text-xs font-bold text-zinc-500 grid grid-cols-12">
+                      <span className="col-span-1">#</span>
+                      <span className="col-span-6">章節標題</span>
+                      <span className="col-span-3">字數</span>
+                      <span className="col-span-2 text-right">操作</span>
+                    </div>
+                    {adminActiveBook.chapters?.length === 0 ? (
+                      <div className="p-6 text-center text-zinc-400 text-xs">目前尚未有章節，點擊上方按鈕開始創作！</div>
+                    ) : (
+                      <div className="divide-y divide-zinc-100">
+                        {adminActiveBook.chapters?.map((chap, idx) => (
+                          <div key={chap.id} className="p-3 text-xs grid grid-cols-12 items-center hover:bg-zinc-50">
+                            <span className="col-span-1 text-zinc-400">{idx + 1}</span>
+                            <span className="col-span-6 font-semibold text-zinc-800 truncate pr-2">{chap.title}</span>
+                            <span className="col-span-3 text-zinc-500">{getWords(chap.content)} 字</span>
+                            <div className="col-span-2 flex items-center justify-end gap-1.5">
+                              <button onClick={() => { setChapterForm({ ...chap }); setIsEditingChapter(true); }} className="p-1 border rounded hover:bg-zinc-100 text-zinc-600"><Icon name="edit" className="w-3 h-3" /></button>
+                              <button onClick={() => handleDeleteChapter(chap.id, chap.title)} className="p-1 hover:bg-rose-50 text-zinc-400 hover:text-rose-600 rounded"><Icon name="trash" className="w-3 h-3" /></button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </main>
+          )}
+
+          {/* 雲端設定彈窗 */}
+          {showConfigModal && (
+            <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+              <form onSubmit={handleSaveConfig} className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 text-xs">
+                <div className="flex justify-between items-center mb-3">
+                  <h3 className="text-sm font-bold text-zinc-900 flex items-center gap-1.5">
+                    <Icon name="cloud" className="w-4 h-4 text-indigo-600" /> Supabase 雲端連線設定
+                  </h3>
+                  <button type="button" onClick={() => setShowConfigModal(false)} className="text-zinc-400 hover:text-zinc-600"><Icon name="x" className="w-4 h-4" /></button>
+                </div>
+                <p className="text-zinc-500 mb-4 leading-relaxed">請將 Supabase API Keys 頁面中的 <b>Publishable key (anon)</b> 貼入此處即可開通即時同步。</p>
+                <div className="space-y-3 mb-4">
+                  <div>
+                    <label className="block font-bold text-zinc-700 mb-1">Project URL</label>
+                    <input type="text" value={sbConfig.url} onChange={(e) => setSbConfig({ ...sbConfig, url: e.target.value })} className="w-full px-3 py-2 border rounded-xl font-mono text-[11px]" />
+                  </div>
+                  <div>
+                    <label className="block font-bold text-zinc-700 mb-1">Publishable key (anon key)</label>
+                    <textarea rows={3} placeholder="sb_publishable_..." value={sbConfig.key} onChange={(e) => setSbConfig({ ...sbConfig, key: e.target.value })} className="w-full px-3 py-2 border rounded-xl font-mono text-[11px]" />
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2">
+                  <button type="button" onClick={() => setShowConfigModal(false)} className="px-3 py-1.5 rounded-lg border">取消</button>
+                  <button type="submit" className="px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-bold">儲存並同步連線</button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {/* 作者登入彈窗 */}
+          {showPasswordModal && (
+            <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+              <form onSubmit={(e) => { e.preventDefault(); if (passwordInput === "author888") { setIsAdminLoggedIn(true); setShowPasswordModal(false); setPasswordInput(""); setView("admin"); } else { alert("密碼錯誤！預設通行碼為：author888"); } }} className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 text-xs">
+                <h3 className="text-sm font-bold text-zinc-900 mb-1">進入作者管理後台</h3>
+                <p className="text-zinc-400 mb-3">預設通行碼為：author888</p>
+                <input type="password" autoFocus placeholder="請輸入密碼" value={passwordInput} onChange={(e) => setPasswordInput(e.target.value)} className="w-full px-3 py-2 rounded-xl border mb-4 text-sm" />
+                <div className="flex justify-end gap-2">
+                  <button type="button" onClick={() => setShowPasswordModal(false)} className="px-3 py-1.5 rounded-lg border">取消</button>
+                  <button type="submit" className="px-4 py-1.5 rounded-lg bg-indigo-600 text-white font-bold">登入</button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {/* 新增/編輯作品彈窗 */}
+          {isEditingBook && (
+            <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+              <form onSubmit={handleSaveBook} className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 text-xs">
+                <div className="flex justify-between items-center mb-3">
+                  <h3 className="text-sm font-bold text-zinc-900">編輯作品資訊</h3>
+                  <button type="button" onClick={() => setIsEditingBook(false)} className="text-zinc-400 hover:text-zinc-600"><Icon name="x" className="w-4 h-4" /></button>
+                </div>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block font-bold text-zinc-700 mb-1">作品名稱 *</label>
+                    <input type="text" required value={bookForm.title} onChange={(e) => setBookForm({ ...bookForm, title: e.target.value })} className="w-full px-3 py-1.5 border rounded-xl text-xs" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block font-bold text-zinc-700 mb-1">作者筆名</label>
+                      <input type="text" value={bookForm.author} onChange={(e) => setBookForm({ ...bookForm, author: e.target.value })} className="w-full px-3 py-1.5 border rounded-xl text-xs" />
+                    </div>
+                    <div>
+                      <label className="block font-bold text-zinc-700 mb-1">作品類型</label>
+                      <input type="text" value={bookForm.genre} onChange={(e) => setBookForm({ ...bookForm, genre: e.target.value })} className="w-full px-3 py-1.5 border rounded-xl text-xs" />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block font-bold text-zinc-700 mb-1">連載狀態</label>
+                      <select value={bookForm.status} onChange={(e) => setBookForm({ ...bookForm, status: e.target.value })} className="w-full px-3 py-1.5 border rounded-xl text-xs bg-white">
+                        <option value="連載中">連載中</option>
+                        <option value="已完結">已完結</option>
+                        <option value="籌備中">籌備中</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block font-bold text-zinc-700 mb-1">封面主題色</label>
+                      <select value={bookForm.cover_theme} onChange={(e) => setBookForm({ ...bookForm, cover_theme: e.target.value })} className="w-full px-3 py-1.5 border rounded-xl text-xs bg-white">
+                        <option value="indigo">典雅靛藍</option>
+                        <option value="emerald">翠林翡翠</option>
+                        <option value="amber">秋金琥珀</option>
+                        <option value="rose">絳紅烈焰</option>
+                        <option value="slate">沉穩玄灰</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block font-bold text-zinc-700 mb-1">作品簡介</label>
+                    <textarea rows={4} value={bookForm.description} onChange={(e) => setBookForm({ ...bookForm, description: e.target.value })} className="w-full px-3 py-1.5 border rounded-xl text-xs leading-relaxed" />
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2 mt-4">
+                  <button type="button" onClick={() => setIsEditingBook(false)} className="px-3 py-1.5 rounded-lg border">取消</button>
+                  <button type="submit" className="px-4 py-1.5 rounded-lg bg-indigo-600 text-white font-bold">儲存作品</button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {/* 新增/編輯章節彈窗 */}
+          {isEditingChapter && (
+            <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+              <form onSubmit={handleSaveChapter} className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full p-6 text-xs flex flex-col max-h-[90vh]">
+                <div className="flex justify-between items-center mb-3 pb-2 border-b">
+                  <div>
+                    <h3 className="text-sm font-bold text-zinc-900">編輯章節（《{adminActiveBook?.title}》）</h3>
+                    <span className="text-zinc-400">字數：{getWords(chapterForm.content)} 字</span>
+                  </div>
+                  <button type="button" onClick={() => setIsEditingChapter(false)} className="text-zinc-400 hover:text-zinc-600"><Icon name="x" className="w-4 h-4" /></button>
+                </div>
+                <div className="space-y-3 flex-1 flex flex-col">
+                  <div>
+                    <label className="block font-bold text-zinc-700 mb-1">章節名稱 *</label>
+                    <input type="text" required placeholder="例如：第一章 宿命重啟" value={chapterForm.title} onChange={(e) => setChapterForm({ ...chapterForm, title: e.target.value })} className="w-full px-3 py-1.5 border rounded-xl text-xs font-semibold" />
+                  </div>
+                  <div className="flex-1 flex flex-col">
+                    <label className="block font-bold text-zinc-700 mb-1">正文內容</label>
+                    <textarea required placeholder="在此貼上小說內文..." value={chapterForm.content} onChange={(e) => setChapterForm({ ...chapterForm, content: e.target.value })} className="w-full flex-1 min-h-[280px] p-3.5 border rounded-xl font-serif text-sm leading-relaxed resize-none" />
+                  </div>
+                </div>
+                <div className="flex justify-between items-center mt-4 pt-3 border-t">
+                  <span className="text-zinc-400">儲存後即時同步更新</span>
+                  <div className="flex gap-2">
+                    <button type="button" onClick={() => setIsEditingChapter(false)} className="px-3 py-1.5 rounded-lg border">取消</button>
+                    <button type="submit" className="px-4 py-1.5 rounded-lg bg-indigo-600 text-white font-bold flex items-center gap-1">
+                      <Icon name="save" className="w-3.5 h-3.5" /> 儲存發布
+                    </button>
+                  </div>
+                </div>
+              </form>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>

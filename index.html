@@ -195,18 +195,32 @@
         return draftsList.filter((d) => d.book_id === adminActiveBook.id);
       }, [draftsList, adminActiveBook]);
 
-      const handleSaveBook = async (e) => {
-        e.preventDefault();
-        if (!bookForm.title.trim()) return alert("請輸入作品名稱！");
-        if (supabaseClient) {
-          setIsLoading(true);
-          await supabaseClient.from("books").upsert({ ...bookForm });
-          setIsLoading(false);
-          await fetchCloudData();
-        }
-        setIsEditingBook(false);
+     const handleSaveBook = async (e) => {
+      e.preventDefault();
+      if (!bookForm.title.trim()) return alert("請輸入作品名稱！");
+      const payload = {
+        id: bookForm.id,
+        title: bookForm.title,
+        author: (bookForm.author || "").trim() || "佚名",
+        genre: bookForm.genre || "未分類",
+        status: bookForm.status || "連載中",
+        cover_theme: bookForm.cover_theme || "indigo",
+        description: bookForm.description || ""
       };
 
+      if (supabaseClient) {
+        setIsLoading(true);
+        const { error } = await supabaseClient.from("books").upsert(payload);
+        setIsLoading(false);
+        if (error) {
+          alert("儲存失敗：" + error.message);
+          return;
+        }
+        await fetchCloudData();
+        alert("🎉 作品設定修改成功！");
+      }
+      setIsEditingBook(false);
+    };
       const handleDeleteBook = async (id, title) => {
         if (!confirm(`確定刪除《${title}》嗎？`)) return;
         if (supabaseClient) {
